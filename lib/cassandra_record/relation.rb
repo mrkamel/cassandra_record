@@ -7,17 +7,17 @@ class Relation
   end
 
   def all
-    dup
+    fresh
   end
 
   def where(hash = {})
-    dup.tap do |relation|
+    fresh.tap do |relation|
       relation.where_values = (relation.where_values || []) + [hash]
     end
   end
 
   def where_cql(string, args = {})
-    dup.tap do |relation|
+    fresh.tap do |relation|
       str = string
 
       args.each do |key, value|
@@ -29,13 +29,13 @@ class Relation
   end
 
   def order(hash = {})
-    dup.tap do |relation|
+    fresh.tap do |relation|
       relation.order_values = (relation.order_values || {}).merge(hash)
     end
   end
 
   def limit(n)
-    dup.tap do |relation|
+    fresh.tap do |relation|
       relation.limit_value = n
     end
   end
@@ -49,13 +49,13 @@ class Relation
   end
 
   def distinct
-    dup.tap do |relation|
+    fresh.tap do |relation|
       relation.distinct_value = true
     end
   end
 
   def select(*columns)
-    dup.tap do |relation|
+    fresh.tap do |relation|
       relation.select_values = (relation.select_values || []) + columns
     end
   end
@@ -102,8 +102,14 @@ class Relation
     target.connection.execute(cql).first["count"]
   end
 
+  def fresh
+    dup.tap do |relation|
+      relation.instance_variable_set(:@response, nil)
+    end
+  end
+
   def to_a
-    find_each.to_a
+    @records ||= find_each.to_a
   end
 
   private
