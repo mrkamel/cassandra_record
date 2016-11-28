@@ -25,7 +25,7 @@ class CassandraRecord::Migration
   end 
 
   def self.migrate(path)
-    migrated = SchemaMigration.all.to_a.map(&:version).to_set
+    migrated = CassandraRecord::SchemaMigration.all.to_a.map(&:version).to_set
     all = Dir[File.join(path, "*.rb")].map { |file| File.basename(file) }
     todo = all.select { |file| file =~ /\A[0-9]+_/ && !migrated.include?(file.to_i.to_s) }
 
