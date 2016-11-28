@@ -8,12 +8,12 @@ jdk:
   - oraclejdk8
 
 install:
+  - travis_retry bundle install
   - curl -s http://artfiles.org/apache.org/cassandra/3.9/apache-cassandra-3.9-bin.tar.gz | tar xz -C /tmp
   - /tmp/apache-cassandra-3.9/bin/cassandra
-  - travis_retry bundle install
 
 before_script:
-  - sleep 10
+  - sleep 30
 
 script:
   - bundle exec rake test
