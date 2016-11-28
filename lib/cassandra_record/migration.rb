@@ -1,5 +1,5 @@
 
-class Migration
+class CassandraRecord::Migration
   def self.migration_file(path, version)
     Dir[File.join(path, "#{version}_*.rb")].first
   end 
@@ -13,7 +13,7 @@ class Migration
 
     migration_class(path, version).new.up
 
-    SchemaMigration.create!(version: version.to_s)
+    CassandraRecord::SchemaMigration.create!(version: version.to_s)
   end 
 
   def self.down(path, version)
@@ -21,7 +21,7 @@ class Migration
 
     migration_class(path, version).new.down
 
-    SchemaMigration.where(version: version.to_s).destroy
+    CassandraRecord::SchemaMigration.where(version: version.to_s).destroy
   end 
 
   def self.migrate(path)

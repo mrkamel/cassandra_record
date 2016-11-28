@@ -1,5 +1,5 @@
 
-class Relation
+class CassandraRecord::Relation
   attr_accessor :target, :where_values, :where_cql_values, :order_values, :limit_value, :distinct_value, :select_values
 
   def initialize(target:)

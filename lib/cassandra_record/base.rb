@@ -148,7 +148,7 @@ class CassandraRecord::Base
   end
 
   def self.relation
-    Relation.new(target: self)
+    CassandraRecord::Relation.new(target: self)
   end
 
   class << self
