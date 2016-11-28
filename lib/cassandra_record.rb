@@ -1,5 +1,6 @@
 
 require "cassandra"
+require "connection_pool"
 require "active_model"
 require "active_support/all"
 

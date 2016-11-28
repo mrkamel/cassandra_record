@@ -3,15 +3,13 @@ require "minitest"
 require "minitest/autorun"
 require "cassandra_record"
 
-cluster = Cassandra.cluster
-
-connection = cluster.connect
+connection = Cassandra.cluster.connect
 connection.execute "DROP KEYSPACE IF EXISTS cassandra_record"
 connection.execute "CREATE KEYSPACE cassandra_record WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 }"
 
-CassandraRecord::Base.connection = cluster.connect("cassandra_record")
+CassandraRecord::Base.connection_pool = ConnectionPool.new(size: 1, timeout: 5) { Cassandra.cluster.connect("cassandra_record") }
 
-CassandraRecord::Base.connection.execute <<EOF
+CassandraRecord::Base.execute_cql <<EOF
   CREATE TABLE test_logs(
     date DATE,
     bucket INT,

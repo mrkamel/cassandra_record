@@ -5,7 +5,7 @@ class CassandraRecord::Base
   include ActiveModel::Validations::Callbacks
   extend ActiveModel::Callbacks
 
-  class_attribute :connection
+  class_attribute :connection_pool
 
   class_attribute :logger
   self.logger = Logger.new(STDOUT)
@@ -116,8 +116,7 @@ class CassandraRecord::Base
 
     cql = "DELETE FROM #{self.class.table_name} #{where_key_clause}"
 
-    self.class.logger.debug(cql)
-    self.class.connection.execute(cql)
+    self.class.execute_cql(cql)
 
     true
   end
@@ -211,6 +210,30 @@ class CassandraRecord::Base
     "'#{string.gsub("'", "''")}'"
   end 
 
+  def self.execute_cql(statement, options = {})
+    logger.debug(statement)
+
+    connection_pool.with do |connection|
+      connection.execute(statement, options)
+    end
+  end
+
+  def self.execute_cql_batch(statements, options = {})
+    statements.each do |statement|
+      logger.debug(statement)
+    end
+
+    connection_pool.with do |connection|
+      batch = connection.batch
+
+      statements.each do |statement|
+        batch.add(statement)
+      end
+
+      connection.execute(batch, options)
+    end
+  end
+
   private
 
   def create_record
@@ -224,8 +247,7 @@ class CassandraRecord::Base
 
           cql = "INSERT INTO #{self.class.table_name}(#{columns_clause}) VALUES(#{values_clause})"
 
-          self.class.logger.debug(cql)
-          self.class.connection.execute(cql)
+          self.class.execute_cql(cql)
         end
       end
     end
@@ -244,27 +266,19 @@ class CassandraRecord::Base
           nils = changes.select { |_, (__, new_value)| new_value.nil? }
           objs = changes.reject { |_, (__, new_value)| new_value.nil? }
 
-          cqls = []
+          statements = []
 
           if nils.present?
-            cqls << "DELETE #{nils.keys.join(", ")} FROM #{self.class.table_name} #{where_key_clause}"
+            statements << "DELETE #{nils.keys.join(", ")} FROM #{self.class.table_name} #{where_key_clause}"
           end
 
           if objs.present?
             update_clause = objs.map { |column, (_, new_value)| "#{column} = #{self.class.quote_value new_value}" }.join(", ")
 
-            cqls << "UPDATE #{self.class.table_name} SET #{update_clause} #{where_key_clause}"
+            statements << "UPDATE #{self.class.table_name} SET #{update_clause} #{where_key_clause}"
           end
 
-          self.class.logger.debug cqls.join("\n")
-
-          batch = connection.batch
-
-          cqls.each do |cql|
-            batch.add cql
-          end
-
-          self.class.connection.execute(batch)
+          self.class.execute_cql_batch(statements)
         end
       end
     end

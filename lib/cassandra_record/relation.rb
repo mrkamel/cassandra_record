@@ -84,32 +84,28 @@ class CassandraRecord::Relation
         end
       end
 
-      yield records
+      yield(records) unless records.empty?
     end
   end
 
   def delete_all
     find_in_batches do |records|
-      batch = target.connection.batch
-
-      records.each do |record|
+      delete_statements = records.map do |record|
         where_clause = target.key_columns.map { |column, _| "#{column} = #{target.quote_value record.read_raw_attribute(column)}" }.join(" AND ")
 
-        cql = "DELETE FROM #{target.table_name} WHERE #{where_clause}"
-
-        target.logger.debug(cql)
-        batch.add(cql)
+        "DELETE FROM #{target.table_name} WHERE #{where_clause}"
       end
 
-      target.connection.execute(batch) unless records.empty?
+      target.execute_cql_batch(delete_statements)
     end
+
+    true
   end
 
   def count
     cql = "SELECT COUNT(*) FROM #{target.table_name} #{where_clause}"
 
-    target.logger.debug(cql)
-    target.connection.execute(cql).first["count"]
+    target.execute_cql(cql).first["count"]
   end
 
   def to_a
@@ -135,18 +131,10 @@ class CassandraRecord::Relation
   end
 
   def each_page(cql, page_size:)
-    page = 0
-
-    target.logger.debug("#{cql} [#{page * page_size}, #{(page + 1) * page_size}]")
-
-    result = target.connection.execute(cql, page_size: page_size)
+    result = target.execute_cql(cql, page_size: page_size)
 
     while result
       yield result
-
-      page += 1
-
-      target.logger.debug("#{cql} [#{page * page_size}, #{(page + 1) * page_size}]")
 
       result = result.next_page
     end
