@@ -21,7 +21,7 @@ class CassandraRecord::Migration
 
     migration_class(path, version).new.down
 
-    CassandraRecord::SchemaMigration.where(version: version.to_s).destroy
+    CassandraRecord::SchemaMigration.where(version: version.to_s).find_each(&:destroy)
   end 
 
   def self.migrate(path)
