@@ -9,7 +9,7 @@ jdk:
 
 install:
   - curl -s http://artfiles.org/apache.org/cassandra/3.9/apache-cassandra-3.9-bin.tar.gz | tar xz -C /tmp
-  - /tmp/apache-cassandra-3.9
+  - /tmp/apache-cassandra-3.9/bin/cassandra
   - travis_retry bundle install
 
 before_script:
