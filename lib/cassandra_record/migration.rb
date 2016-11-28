@@ -21,13 +21,13 @@ class CassandraRecord::Migration
 
     migration_class(path, version).new.down
 
-    CassandraRecord::SchemaMigration.where(version: version.to_s).find_each(&:destroy)
+    CassandraRecord::SchemaMigration.where(version: version.to_s).delete_all
   end 
 
   def self.migrate(path)
     migrated = CassandraRecord::SchemaMigration.all.to_a.map(&:version).to_set
     all = Dir[File.join(path, "*.rb")].map { |file| File.basename(file) }
-    todo = all.select { |file| file =~ /\A[0-9]+_/ && !migrated.include?(file.to_i.to_s) }
+    todo = all.select { |file| file =~ /\A[0-9]+_/ && !migrated.include?(file.to_i.to_s) }.sort_by(&:to_i)
 
     todo.each do |file|
       up path, file.to_i.to_s
