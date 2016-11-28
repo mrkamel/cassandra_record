@@ -96,7 +96,7 @@ class CassandraRecord::Relation
         "DELETE FROM #{target.table_name} WHERE #{where_clause}"
       end
 
-      target.execute_cql_batch(delete_statements)
+      target.execute_batch(delete_statements)
     end
 
     true
@@ -105,7 +105,7 @@ class CassandraRecord::Relation
   def count
     cql = "SELECT COUNT(*) FROM #{target.table_name} #{where_clause}"
 
-    target.execute_cql(cql).first["count"]
+    target.execute(cql).first["count"]
   end
 
   def to_a
@@ -131,7 +131,7 @@ class CassandraRecord::Relation
   end
 
   def each_page(cql, page_size:)
-    result = target.execute_cql(cql, page_size: page_size)
+    result = target.execute(cql, page_size: page_size)
 
     while result
       yield result

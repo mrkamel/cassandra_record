@@ -145,10 +145,10 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
   def test_table_name
   end
 
-  def test_execute_cql
+  def test_execute
   end
 
-  def test_execute_cql_batch
+  def test_execute_batch
   end
 end
 

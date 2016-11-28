@@ -34,8 +34,8 @@ class CassandraRecord::Migration
     end 
   end 
 
-  def execute_cql(*args)
-    CassandraRecord::Base.execute_cql(*args)
+  def execute(*args)
+    CassandraRecord::Base.execute(*args)
   end 
 
   def up; end 

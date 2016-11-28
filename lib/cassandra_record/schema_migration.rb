@@ -5,7 +5,7 @@ class CassandraRecord::SchemaMigration < CassandraRecord::Base
   end
 
   def self.create_table
-    execute_cql "CREATE TABLE schema_migrations(version TEXT PRIMARY KEY)"
+    execute "CREATE TABLE schema_migrations(version TEXT PRIMARY KEY)"
   end
 
   column :version, :text, key: true

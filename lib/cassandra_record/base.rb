@@ -116,7 +116,7 @@ class CassandraRecord::Base
 
     cql = "DELETE FROM #{self.class.table_name} #{where_key_clause}"
 
-    self.class.execute_cql(cql)
+    self.class.execute(cql)
 
     true
   end
@@ -210,7 +210,7 @@ class CassandraRecord::Base
     "'#{string.gsub("'", "''")}'"
   end 
 
-  def self.execute_cql(statement, options = {})
+  def self.execute(statement, options = {})
     logger.debug(statement)
 
     connection_pool.with do |connection|
@@ -218,7 +218,7 @@ class CassandraRecord::Base
     end
   end
 
-  def self.execute_cql_batch(statements, options = {})
+  def self.execute_batch(statements, options = {})
     statements.each do |statement|
       logger.debug(statement)
     end
@@ -247,7 +247,7 @@ class CassandraRecord::Base
 
           cql = "INSERT INTO #{self.class.table_name}(#{columns_clause}) VALUES(#{values_clause})"
 
-          self.class.execute_cql(cql)
+          self.class.execute(cql)
         end
       end
     end
@@ -278,7 +278,7 @@ class CassandraRecord::Base
             statements << "UPDATE #{self.class.table_name} SET #{update_clause} #{where_key_clause}"
           end
 
-          self.class.execute_cql_batch(statements)
+          self.class.execute_batch(statements)
         end
       end
     end

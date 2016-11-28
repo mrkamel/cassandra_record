@@ -9,7 +9,7 @@ connection.execute "CREATE KEYSPACE cassandra_record WITH REPLICATION = { 'class
 
 CassandraRecord::Base.connection_pool = ConnectionPool.new(size: 1, timeout: 5) { Cassandra.cluster.connect("cassandra_record") }
 
-CassandraRecord::Base.execute_cql <<EOF
+CassandraRecord::Base.execute <<EOF
   CREATE TABLE test_logs(
     date DATE,
     bucket INT,
