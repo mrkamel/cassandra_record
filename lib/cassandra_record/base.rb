@@ -9,6 +9,7 @@ class CassandraRecord::Base
 
   class_attribute :logger
   self.logger = Logger.new(STDOUT)
+  self.logger.level = Logger::INFO
 
   class_attribute :columns
   self.columns = {}

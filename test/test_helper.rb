@@ -10,7 +10,6 @@ connection.execute "DROP KEYSPACE IF EXISTS cassandra_record"
 connection.execute "CREATE KEYSPACE cassandra_record WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 }"
 
 CassandraRecord::Base.connection = cluster.connect("cassandra_record")
-CassandraRecord::Base.logger.level = Logger::INFO
 
 CassandraRecord::Base.connection.execute <<EOF
   CREATE TABLE test_logs(
