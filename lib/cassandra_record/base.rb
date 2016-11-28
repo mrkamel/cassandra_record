@@ -5,10 +5,6 @@ class CassandraRecord::Base
   include ActiveModel::Validations::Callbacks
   extend ActiveModel::Callbacks
 
-  class RecordInvalid < StandardError; end
-  class RecordNotPersisted < StandardError; end
-  class RecordAlreadyPersisted < StandardError; end
-
   class_attribute :connection
 
   class_attribute :logger
@@ -20,12 +16,14 @@ class CassandraRecord::Base
   define_model_callbacks :create, :update, :save, :destroy
 
   def initialize(attributes = {})
+    @persisted = false
+
     assign(attributes)
   end
 
   def assign(attributes = {})
     attributes.each do |column, value|
-      write_attribute(column, value)
+      send(:"#{column}=", value)
     end
   end
 
@@ -36,6 +34,8 @@ class CassandraRecord::Base
   end
 
   def read_raw_attribute(attribute)
+    return nil unless instance_variable_defined?(:"@#{attribute}")
+
     instance_variable_get(:"@#{attribute}")
   end
 
@@ -52,7 +52,7 @@ class CassandraRecord::Base
   end
 
   def save!
-    valid?(persisted? ? :update : :create) || raise(RecordInvalid, errors.to_a.join(", "))
+    valid?(persisted? ? :update : :create) || raise(CassandraRecord::RecordInvalid, errors.to_a.join(", "))
 
     save
   end
@@ -99,7 +99,7 @@ class CassandraRecord::Base
   end
 
   def destroy
-    raise RecordNotPersisted unless persisted?
+    raise CassandraRecord::RecordNotPersisted unless persisted?
 
     run_callbacks :destroy do
       delete
@@ -111,7 +111,7 @@ class CassandraRecord::Base
   end
 
   def delete
-    raise RecordNotPersisted unless persisted?
+    raise CassandraRecord::RecordNotPersisted unless persisted?
 
     cql = "DELETE FROM #{self.class.table_name} #{where_key_clause}"
 
@@ -130,7 +130,7 @@ class CassandraRecord::Base
   end
     
   def self.column(name, type, key: false)
-    columns[name] = { type: type, key: key }
+    self.columns = columns.merge(name => { type: type, key: key })
 
     define_attribute_methods name
 
@@ -171,6 +171,7 @@ class CassandraRecord::Base
         if value.is_a?(String) then Date.parse(value)
         elsif value.respond_to?(:to_date) then value.to_date
         else raise(ArgumentError, "Can't cast '#{value}' to #{type}")
+        end
       when :timestamp
         if value.is_a?(String) then Time.parse(value)
         elsif value.respond_to?(:to_time) then value.to_time
@@ -212,7 +213,7 @@ class CassandraRecord::Base
   private
 
   def create_record
-    raise RecordAlreadyPersisted if persisted?
+    raise CassandraRecord::RecordAlreadyPersisted if persisted?
 
     run_callbacks :save do
       run_callbacks :create do
@@ -234,7 +235,7 @@ class CassandraRecord::Base
   end
 
   def update_record
-    raise RecordNotPersisted unless persisted?
+    raise CassandraRecord::RecordNotPersisted unless persisted?
 
     run_callbacks :save do
       run_callbacks :update do
