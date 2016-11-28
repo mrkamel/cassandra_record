@@ -1,5 +1,5 @@
 
-class SchemaMigration < CassandraRecord
+class SchemaMigration < CassandraRecord::Base
   def self.table_name
     "schema_migrations"
   end

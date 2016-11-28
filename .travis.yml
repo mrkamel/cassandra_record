@@ -1,0 +1,22 @@
+
+rvm:
+  - 2.1.10
+  - 2.2.5
+  - 2.3.1
+
+jdk:
+  - openjdk8
+
+install:
+  - curl -s http://artfiles.org/apache.org/cassandra/3.9/apache-cassandra-3.9-bin.tar.gz | tar xz -C /tmp
+  - /tmp/apache-cassandra-3.9
+  - travis_retry bundle install
+
+before_script:
+  - sleep 10
+
+script:
+  - bundle exec rake test
+
+sudo: false
+

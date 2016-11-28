@@ -25,14 +25,22 @@ class CassandraRecord::Base
 
   def assign(attributes = {})
     attributes.each do |column, value|
-      send(:"#{column}=", value) if columns[column.to_sym]
+      write_attribute(column, value)
     end
   end
 
   def attributes
-    columns.each_with_object({}) do |(name, args), hash|
-      hash[name] = instance_variable_get(:"@#{name}")
+    columns.each_with_object({}) do |(name, _), hash|
+      hash[name] = read_raw_attribute(name)
     end
+  end
+
+  def read_raw_attribute(attribute)
+    instance_variable_get(:"@#{attribute}")
+  end
+
+  def write_raw_attribute(attribute, value)
+    instance_variable_set(:"@#{attribute}", value)
   end
 
   def self.create!(attributes = {})
@@ -58,11 +66,16 @@ class CassandraRecord::Base
       return false unless valid?(:create)
 
       create_record
+      persisted!
     end
   end
 
   def persisted?
     !! @persisted
+  end
+
+  def persisted!
+    @persisted = true
   end
 
   def new_record?
@@ -79,17 +92,31 @@ class CassandraRecord::Base
     save
   end
 
+  def update!(attributes = {})
+    assign(attributes)
+
+    save!
+  end
+
   def destroy
     raise RecordNotPersisted unless persisted?
 
     run_callbacks :destroy do
-      cql = "DELETE FROM #{self.class.table_name} #{where_key_clause}"
-
-      self.class.logger.debug(cql)
-      self.class.connection.execute(cql)
+      delete
 
       @destroyed = true
     end
+
+    true
+  end
+
+  def delete
+    raise RecordNotPersisted unless persisted?
+
+    cql = "DELETE FROM #{self.class.table_name} #{where_key_clause}"
+
+    self.class.logger.debug(cql)
+    self.class.connection.execute(cql)
 
     true
   end
@@ -108,15 +135,15 @@ class CassandraRecord::Base
     define_attribute_methods name
 
     define_method name do
-      instance_variable_get :"@#{name}"
+      read_raw_attribute(name)
     end
 
     define_method :"#{name}=" do |value|
       raise(ArgumentError, "Can't update key '#{name}' for persisted records") if persisted? && self.class.columns[name][:key]
 
-      send :"#{name}_will_change!" unless instance_variable_get(:"@#{name}") == value
+      send :"#{name}_will_change!" unless read_raw_attribute(name) == value
 
-      instance_variable_set :"@#{name}", self.class.cast_value(value, type)
+      write_raw_attribute(name, self.class.cast_value(value, type))
     end
   end
 
@@ -125,7 +152,7 @@ class CassandraRecord::Base
   end
 
   class << self
-    delegate :all, :where, :count, :limit, :first, :order, :distinct, :select, :find_each, :find_in_batches, to: :relation
+    delegate :all, :where, :count, :limit, :first, :order, :distinct, :select, :find_each, :find_in_batches, :delete_all, to: :relation
   end
 
   def self.cast_value(value, type)
@@ -140,6 +167,10 @@ class CassandraRecord::Base
         return true if [1, "1", "true", true].include?(value)
         return false if [0, "0", "false", false].include?(value)
         raise ArgumentError, "Can't cast '#{value}' to #{type}"
+      when :date
+        if value.is_a?(String) then Date.parse(value)
+        elsif value.respond_to?(:to_date) then value.to_date
+        else raise(ArgumentError, "Can't cast '#{value}' to #{type}")
       when :timestamp
         if value.is_a?(String) then Time.parse(value)
         elsif value.respond_to?(:to_time) then value.to_time
@@ -166,7 +197,7 @@ class CassandraRecord::Base
       when DateTime
         quote_value(value.utc.to_time)
       when Date
-        quote_value(Time.gm(value.year, value.month, value.day))
+        quote_value(value.strftime("%Y-%m-%d"))
       when Numeric, true, false, Cassandra::Uuid
         value.to_s
       else
@@ -223,7 +254,7 @@ class CassandraRecord::Base
             cqls << "UPDATE #{self.class.table_name} SET #{update_clause} #{where_key_clause}"
           end
 
-          self.class.logger.debug ["BEGIN BATCH", cqls, "END_BATCH"].flatten.join("\n")
+          self.class.logger.debug cqls.join("\n")
 
           batch = connection.batch
 
@@ -242,7 +273,7 @@ class CassandraRecord::Base
   end
 
   def where_key_clause
-    "WHERE #{self.class.key_columns.map { |column, _| "#{column} = #{self.class.quote_value instance_variable_get(:"@#{column}")}" }.join(" AND ")}"
+    "WHERE #{self.class.key_columns.map { |column, _| "#{column} = #{self.class.quote_value read_raw_attribute(column)}" }.join(" AND ")}"
   end
 
   def generate_uuid

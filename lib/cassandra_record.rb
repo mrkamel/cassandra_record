@@ -1,5 +1,6 @@
 
-require "active_support/all"
+require "cassandra"
+require "active_model"
 
 require "cassandra_record/version"
 require "cassandra_record/base"

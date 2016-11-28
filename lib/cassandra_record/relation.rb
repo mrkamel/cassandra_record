@@ -80,18 +80,28 @@ class Relation
         if select_values.present?
           records << row
         else
-          record = target.new
-          record.instance_variable_set(:"@persisted", true)
-
-          row.each do |key, value|
-            record.instance_variable_set(:"@#{key}", value)
-          end
-
-          records << record
+          records << load_record(row)
         end
       end
 
       yield records
+    end
+  end
+
+  def delete_all
+    find_in_batches do |records|
+      batch = target.connection.batch
+
+      records.each do |record|
+        where_clause = target.key_columns.map { |column, _| "#{column} = #{target.quote_value record.read_raw_attribute(column)}" }.join(" AND ")
+
+        cql = "DELETE FROM #{target.table_name} WHERE #{where_clause}"
+
+        target.logger.debug(cql)
+        batch.add(cql)
+      end
+
+      target.connection.execute(batch) unless records.empty?
     end
   end
 
@@ -102,17 +112,27 @@ class Relation
     target.connection.execute(cql).first["count"]
   end
 
-  def fresh
-    dup.tap do |relation|
-      relation.instance_variable_set(:@response, nil)
-    end
-  end
-
   def to_a
     @records ||= find_each.to_a
   end
 
   private
+
+  def load_record(row)
+    target.new.tap do |record|
+      record.persisted!
+
+      row.each do |key, value|
+        record.write_raw_attribute(key, value)
+      end
+    end
+  end
+
+  def fresh
+    dup.tap do |relation|
+      relation.instance_variable_set(:@response, nil)
+    end
+  end
 
   def each_page(cql, page_size:)
     page = 0
@@ -141,7 +161,7 @@ class Relation
 
     constraints = []
 
-    where_values.each do |hash|
+    Array(where_values).each do |hash|
       hash.each do |column, value|
         if value.is_a?(Array) || value.is_a?(Range)
           constraints << "#{column} IN (#{value.to_a.map { |v| target.quote_value v }.join(", ")})"
@@ -149,9 +169,9 @@ class Relation
           constraints << "#{column} = #{target.quote_value value}"
         end
       end
-    end if where_values.present?
+    end
 
-    constraints += where_cql_values if where_cql_values.present?
+    constraints += Array(where_cql_values)
 
     "WHERE #{constraints.join(" AND ")}"
   end
