@@ -126,7 +126,7 @@ class CassandraRecord::Relation
 
   def fresh
     dup.tap do |relation|
-      relation.instance_variable_set(:@response, nil)
+      relation.instance_variable_set(:@records, nil)
     end
   end
 

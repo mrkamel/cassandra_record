@@ -13,24 +13,34 @@ end
 
 class CassandraRecord::BaseTest < CassandraRecord::TestCase
   def test_new
-    test_log = TestLog.new(timestamp: "2016-11-01 12:00", username: "username")
+    test_log = TestLog.new(timestamp: "2016-11-01 12:00:00", username: "username")
 
-    assert_equal Time.parse("2016-11-01 12:00").utc.round(3), test_log.timestamp
+    assert_equal Time.parse("2016-11-01 12:00:00").utc.round(3), test_log.timestamp
     assert_equal "username", test_log.username
   end
 
   def test_assign
     test_log = TestLog.new
-    test_log.assign(timestamp: "2016-11-01 12:00", username: "username")
+    test_log.assign(timestamp: "2016-11-01 12:00:00", username: "username")
 
-    assert_equal Time.parse("2016-11-01 12:00").utc.round(3), test_log.timestamp
+    assert_equal Time.parse("2016-11-01 12:00:00").utc.round(3), test_log.timestamp
     assert_equal "username", test_log.username
   end
 
-  def test_attributes
-    test_log = TestLog.new(timestamp: "2016-11-01 12:00", username: "username")
+  def test_assign_persisted_key
+    test_log = TestLog.create!(timestamp: Time.parse("2016-11-01 12:00:00"))
 
-    assert_equal({ date: nil, bucket: nil, id: nil, username: "username", timestamp: Time.parse("2016-11-01 12:00").utc.round(3) }, test_log.attributes)
+    assert test_log.persisted?
+
+    assert_raises ArgumentError do
+      test_log.assign(date: Date.parse("2016-11-02"))
+    end
+  end
+
+  def test_attributes
+    test_log = TestLog.new(timestamp: "2016-11-01 12:00:00", username: "username")
+
+    assert_equal({ date: nil, bucket: nil, id: nil, username: "username", timestamp: Time.parse("2016-11-01 12:00:00").utc.round(3) }, test_log.attributes)
   end
 
   def test_casting
@@ -54,12 +64,12 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
     test_record.date = "2016-11-02"
     assert_equal Date.new(2016, 11, 2), test_record.date
 
-    test_record.timestamp = Time.parse("2016-11-01 12:00")
-    assert_equal Time.parse("2016-11-01 12:00").utc.round(3), test_record.timestamp
-    test_record.timestamp = "2016-11-02 12:00"
-    assert_equal Time.parse("2016-11-02 12:00").utc.round(3), test_record.timestamp
-    test_record.timestamp = Time.parse("2016-11-03 12:00").to_i
-    assert_equal Time.parse("2016-11-03 12:00").utc.round(3), test_record.timestamp
+    test_record.timestamp = Time.parse("2016-11-01 12:00:00")
+    assert_equal Time.parse("2016-11-01 12:00:00").utc.round(3), test_record.timestamp
+    test_record.timestamp = "2016-11-02 12:00:00"
+    assert_equal Time.parse("2016-11-02 12:00:00").utc.round(3), test_record.timestamp
+    test_record.timestamp = Time.parse("2016-11-03 12:00:00").to_i
+    assert_equal Time.parse("2016-11-03 12:00:00").utc.round(3), test_record.timestamp
 
     test_record.timeuuid = Cassandra::TimeUuid.new("1ce29e82-b2ea-11e6-88fa-2971245f69e1")
     assert_equal Cassandra::TimeUuid.new("1ce29e82-b2ea-11e6-88fa-2971245f69e1"), test_record.timeuuid
@@ -85,7 +95,7 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
 
     assert_includes test_log.errors[:timestamp], "can't be blank"
 
-    test_log = TestLog.new(timestamp: Time.parse("2016-11-01 12:00"), username: "username")
+    test_log = TestLog.new(timestamp: Time.parse("2016-11-01 12:00:00"), username: "username")
 
     assert_difference "TestLog.count" do
       assert test_log.save
@@ -108,7 +118,7 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
       end
     end
 
-    test_log = TestLog.new(timestamp: Time.parse("2016-11-01 12:00"))
+    test_log = TestLog.new(timestamp: Time.parse("2016-11-01 12:00:00"))
 
     assert_difference "TestLog.count" do
       assert test_log.save
@@ -116,15 +126,66 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
   end
 
   def test_create
+    test_log = nil
+
+    assert_no_difference "TestLog.count" do
+      test_log = TestLog.create
+    end
+
+    refute test_log.persisted?
+    assert_includes test_log.errors[:timestamp], "can't be blank"
+
+    assert_difference "TestLog.count" do
+      test_log = TestLog.create!(timestamp: Time.parse("2016-11-01 12:00:00"), username: "username")
+    end
+
+    assert test_log.persisted?
+
+    assert_equal Date.parse("2016-11-01"), test_log.date
+    assert_equal "username", test_log.username
+    assert_present test_log.bucket
+    assert_present test_log.id
   end
 
   def test_create!
+    assert_no_difference "TestLog.count" do
+      assert_raises CassandraRecord::RecordInvalid do
+        TestLog.create!
+      end
+    end
+
+    assert_difference "TestLog.count" do
+      TestLog.create!(timestamp: Time.parse("2016-11-01 12:00:00"))
+    end
   end
 
   def test_update
+    test_log = TestLog.create!(timestamp: Time.parse("2016-11-01 12:00:00"))
+
+    assert test_log.persisted?
+    assert_nil test_log.username
+
+    refute test_log.update(timestamp: nil)
+    assert_includes test_log.errors[:timestamp], "can't be blank"
+
+    assert test_log.update(username: "username", timestamp: Time.parse("2016-11-02 12:00:00"))
+
+    test_log = TestLog.where(date: test_log.date, bucket: test_log.bucket, id: test_log.id).first
+
+    assert_equal "username", test_log.username
+    assert_equal Time.parse("2016-11-02 12:00:00").utc.round(3), test_log.timestamp
   end
 
   def test_update!
+    test_log = TestLog.create!(timestamp: Time.parse("2016-11-01 12:00:00"))
+
+    assert test_log.persisted?
+
+    assert_raises CassandraRecord::RecordInvalid do
+      test_log.update!(timestamp: nil)
+    end
+
+    assert test_log.update!(username: "username", timestamp: Time.parse("2016-11-02 12:00:00"))
   end
 
   def test_persisted
