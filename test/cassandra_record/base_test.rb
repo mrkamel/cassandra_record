@@ -188,16 +188,46 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
     assert test_log.update!(username: "username", timestamp: Time.parse("2016-11-02 12:00:00"))
   end
 
-  def test_persisted
+  def test_persisted?
+    test_log = TestLog.new(timestamp: Time.parse("2016-11-01 12:00:00"))
+
+    refute test_log.persisted?
+    assert test_log.save
+    assert test_log.persisted?
   end
 
   def test_new_record?
+    test_log = TestLog.new(timestamp: Time.parse("2016-11-01 12:00:00"))
+
+    assert test_log.new_record?
+    assert test_log.save
+    refute test_log.new_record?
   end
 
   def test_delete
+    test_log = TestLog.new(timestamp: Time.parse("2016-11-01 12:00:00"))
+
+    assert_difference "TestLog.count" do
+      assert test_log.save
+    end
+
+    assert_difference "TestLog.count", -1 do
+      test_log.delete
+    end
   end
 
   def test_destroy
+    test_log = TestLog.new(timestamp: Time.parse("2016-11-01 12:00:00"))
+
+    assert_difference "TestLog.count" do
+      assert test_log.save
+    end
+
+    assert_difference "TestLog.count", -1 do
+      test_log.destroy
+    end
+
+    assert test_log.destroyed?
   end
 
   def test_destroyed?
@@ -210,6 +240,15 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
   end
 
   def test_execute_batch
+  end
+
+  def test_callbacks
+  end
+
+  def test_changes
+  end
+
+  def test_truncate_table
   end
 end
 

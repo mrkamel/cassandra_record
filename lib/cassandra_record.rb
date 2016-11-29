@@ -13,7 +13,6 @@ require "cassandra_record/migration"
 module CassandraRecord
   class RecordInvalid < StandardError; end
   class RecordNotPersisted < StandardError; end
-  class RecordAlreadyPersisted < StandardError; end
   class UnknownType < StandardError; end
 end
 

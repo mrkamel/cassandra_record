@@ -62,13 +62,18 @@ class CassandraRecord::Base
     if persisted?
       return false unless valid?(:update)
 
-      update_record
+      run_callbacks(:save) { update_record }
     else
       return false unless valid?(:create)
 
-      create_record
+      run_callbacks(:save) { create_record }
+
       persisted!
     end
+
+    changes_applied
+
+    true
   end
 
   def persisted?
@@ -210,6 +215,10 @@ class CassandraRecord::Base
     "'#{string.gsub("'", "''")}'"
   end 
 
+  def self.truncate_table
+    execute "TRUNCATE TABLE #{table_name}"
+  end
+
   def self.execute(statement, options = {})
     logger.debug(statement)
 
@@ -237,55 +246,37 @@ class CassandraRecord::Base
   private
 
   def create_record
-    raise CassandraRecord::RecordAlreadyPersisted if persisted?
+    run_callbacks :create do
+      columns_clause = changes.keys.join(", ")
+      values_clause = changes.values.map(&:last).map { |value| self.class.quote_value value }.join(", ")
 
-    run_callbacks :save do
-      run_callbacks :create do
-        if changes.present?
-          columns_clause = changes.keys.join(", ")
-          values_clause = changes.values.map(&:last).map { |value| self.class.quote_value value }.join(", ")
+      cql = "INSERT INTO #{self.class.table_name}(#{columns_clause}) VALUES(#{values_clause})"
 
-          cql = "INSERT INTO #{self.class.table_name}(#{columns_clause}) VALUES(#{values_clause})"
-
-          self.class.execute(cql)
-        end
-      end
+      self.class.execute(cql)
     end
-
-    changes_applied
-
-    true
   end
 
   def update_record
-    raise CassandraRecord::RecordNotPersisted unless persisted?
+    run_callbacks :update do
+      if changes.present?
+        nils = changes.select { |_, (__, new_value)| new_value.nil? }
+        objs = changes.reject { |_, (__, new_value)| new_value.nil? }
 
-    run_callbacks :save do
-      run_callbacks :update do
-        if changes.present?
-          nils = changes.select { |_, (__, new_value)| new_value.nil? }
-          objs = changes.reject { |_, (__, new_value)| new_value.nil? }
+        statements = []
 
-          statements = []
-
-          if nils.present?
-            statements << "DELETE #{nils.keys.join(", ")} FROM #{self.class.table_name} #{where_key_clause}"
-          end
-
-          if objs.present?
-            update_clause = objs.map { |column, (_, new_value)| "#{column} = #{self.class.quote_value new_value}" }.join(", ")
-
-            statements << "UPDATE #{self.class.table_name} SET #{update_clause} #{where_key_clause}"
-          end
-
-          self.class.execute_batch(statements)
+        if nils.present?
+          statements << "DELETE #{nils.keys.join(", ")} FROM #{self.class.table_name} #{where_key_clause}"
         end
+
+        if objs.present?
+          update_clause = objs.map { |column, (_, new_value)| "#{column} = #{self.class.quote_value new_value}" }.join(", ")
+
+          statements << "UPDATE #{self.class.table_name} SET #{update_clause} #{where_key_clause}"
+        end
+
+        self.class.execute_batch(statements)
       end
     end
-
-    changes_applied
-
-    true
   end
 
   def where_key_clause
