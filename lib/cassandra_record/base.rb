@@ -18,6 +18,7 @@ class CassandraRecord::Base
 
   def initialize(attributes = {})
     @persisted = false
+    @destroyed = false
 
     assign(attributes)
   end

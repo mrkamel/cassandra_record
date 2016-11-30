@@ -231,24 +231,57 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
   end
 
   def test_destroyed?
+    test_log = TestLog.new(timestamp: Time.parse("2016-11-01 12:00:00"))
+
+    refute test_log.destroyed?
+    assert test_log.save
+    refute test_log.destroyed?
+    assert test_log.destroy
+    assert test_log.destroyed?
   end
 
   def test_table_name
+    assert_equal "test_logs", TestLog.table_name
+  end
+
+  def test_truncate_table
+    TestLog.create!(timestamp: Time.parse("2016-11-01 12:00:00"))
+    TestLog.create!(timestamp: Time.parse("2016-11-02 12:00:00"))
+
+    TestLog.truncate_table
+
+    assert_equal 0, TestLog.count
   end
 
   def test_execute
+    records = [
+      TestLog.create!(timestamp: Time.parse("2016-11-01 12:00:00")),
+      TestLog.create!(timestamp: Time.parse("2016-11-02 12:00:00"))
+    ]
+
+    assert_equal records.map(&:id).to_set, TestLog.execute("SELECT * FROM test_logs", consistency: :all).map { |row| row["id"] }.to_set
   end
 
   def test_execute_batch
+    records = [
+      TestLog.create!(timestamp: Time.parse("2016-11-01 12:00:00")),
+      TestLog.create!(timestamp: Time.parse("2016-11-02 12:00:00"))
+    ]
+
+    batch = [
+      "DELETE FROM test_logs WHERE date = '#{records[0].date.strftime("%F")}' AND bucket = #{records[0].bucket} AND id = #{records[0].id}",
+      "DELETE FROM test_logs WHERE date = '#{records[1].date.strftime("%F")}' AND bucket = #{records[1].bucket} AND id = #{records[1].id}"
+    ]
+
+    assert_difference "TestLog.count", -2 do
+      TestLog.execute_batch(batch, consistency: :all)
+    end
   end
 
   def test_callbacks
   end
 
-  def test_changes
-  end
-
-  def test_truncate_table
+  def test_dirty
   end
 end
 
