@@ -278,6 +278,18 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
     end
   end
 
+  def test_validate!
+  end
+
+  def test_save_batch
+  end
+
+  def test_destroy_batch
+  end
+
+  def test_delete_batch
+  end
+
   def test_callbacks
   end
 

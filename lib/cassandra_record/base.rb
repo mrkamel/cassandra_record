@@ -2,8 +2,7 @@
 class CassandraRecord::Base
   include ActiveModel::Dirty
   include ActiveModel::Validations
-  include ActiveModel::Validations::Callbacks
-  extend ActiveModel::Callbacks
+  include Hooks
 
   class_attribute :connection_pool
 
@@ -14,7 +13,7 @@ class CassandraRecord::Base
   class_attribute :columns
   self.columns = {}
 
-  define_model_callbacks :create, :update, :save, :destroy
+  define_hooks :before_validation, :after_validation, :before_create, :after_create, :before_update, :after_update, :before_save, :after_save, :before_destroy, :after_destroy
 
   def initialize(attributes = {})
     @persisted = false
@@ -54,27 +53,29 @@ class CassandraRecord::Base
   end
 
   def save!
-    valid?(persisted? ? :update : :create) || raise(CassandraRecord::RecordInvalid, errors.to_a.join(", "))
+    validate!
 
-    save
+    _save
   end
     
   def save
-    if persisted?
-      return false unless valid?(:update)
+    return false unless valid?
 
-      run_callbacks(:save) { update_record }
-    else
-      return false unless valid?(:create)
+    _save
+  end
 
-      run_callbacks(:save) { create_record }
+  def valid?
+    run_hook(:before_validation, self)
 
-      persisted!
-    end
+    retval = super
 
-    changes_applied
+    run_hook(:after_validation, self)
 
-    true
+    retval
+  end
+
+  def validate!
+    valid? || raise(CassandraRecord::RecordInvalid, errors.to_a.join(", "))
   end
 
   def persisted?
@@ -93,6 +94,10 @@ class CassandraRecord::Base
     !! @destroyed
   end
 
+  def destroyed!
+    @destroyed = true
+  end
+
   def update(attributes = {})
     assign(attributes)
 
@@ -108,11 +113,13 @@ class CassandraRecord::Base
   def destroy
     raise CassandraRecord::RecordNotPersisted unless persisted?
 
-    run_callbacks :destroy do
-      delete
+    run_hook(:before_destroy, self)
 
-      @destroyed = true
-    end
+    delete
+
+    destroyed!
+
+    run_hook(:after_destroy, self)
 
     true
   end
@@ -120,9 +127,7 @@ class CassandraRecord::Base
   def delete
     raise CassandraRecord::RecordNotPersisted unless persisted?
 
-    cql = "DELETE FROM #{self.class.table_name} #{where_key_clause}"
-
-    self.class.execute(cql)
+    self.class.execute(delete_record_statement)
 
     true
   end
@@ -193,7 +198,7 @@ class CassandraRecord::Base
         return Cassandra::Uuid.new(value) if value.is_a?(String) || value.is_a?(Integer)
         raise ArgumentError, "Can't cast '#{value}' to #{type}"
       else
-        raise UnknownType, "Unknown type #{type}"
+        raise CassandraRecord::UnknownType, "Unknown type #{type}"
     end
   end
 
@@ -244,40 +249,152 @@ class CassandraRecord::Base
     end
   end
 
+  def self.save_batch!(records, options = {})
+    records.each do |record|
+      record.validate!
+    end
+
+    _save_batch(records, options)
+  end
+
+  def self.save_batch(records, options = {})
+    records.each do |record|
+      return false unless record.valid?
+    end
+
+    _save_batch(records, options)
+  end
+
+  def self.destroy_batch(records, options = {})
+    raise CassandraRecord::RecordNotPersisted unless records.all?(&:persisted?)
+
+    records.each do |record|
+      record.run_hook(:before_destroy, record)
+    end
+
+    statements = records.map do |record|
+      record.send :delete_record_statement
+    end
+
+    execute_batch(statements, options)
+
+    records.each do |record|
+      record.destroyed!
+    end
+
+    records.each do |record|
+      records.run_hook(:after_destroy, record)
+    end
+
+    true
+  end
+
+  def self.delete_batch(records, options = {})
+    raise CassandraRecord::RecordNotPersisted unless records.all?(&:persisted?)
+
+    statements = records.map do |record|
+      record.send :delete_record_statement
+    end
+
+    execute_batch(statements, options)
+
+    true
+  end
+
   private
 
-  def create_record
-    run_callbacks :create do
-      columns_clause = changes.keys.join(", ")
-      values_clause = changes.values.map(&:last).map { |value| self.class.quote_value value }.join(", ")
+  def _save
+    if persisted?
+      run_hook(:before_save, self)
 
-      cql = "INSERT INTO #{self.class.table_name}(#{columns_clause}) VALUES(#{values_clause})"
+      update_record
 
-      self.class.execute(cql)
+      run_hook(:after_save, self)
+    else
+      run_hook(:before_save, self)
+
+      create_record
+      persisted!
+
+      run_hook(:after_save, self)
     end
+
+    changes_applied
+
+    true
+  end
+
+  def self._save_batch(records, options = {})
+    records.each do |record|
+      record.run_hook(:before_save, record)
+      record.run_hook(record.persisted? ? :before_update : :before_create, record)
+    end
+
+    statements = records.flat_map do |record|
+      record.send(record.persisted? ? :update_record_statements : :create_record_statement)
+    end
+
+    execute_batch(statements, options)
+
+    persistence = records.map(&:persisted?)
+
+    records.each(&:persisted!)
+
+    records.each_with_index do |record, index|
+      record.run_hook(persistence[index] ? :after_update : :after_create, record)
+    end
+
+    records.each do |record|
+      record.send :changes_applied
+    end
+
+    true
+  end
+
+  def create_record
+    run_hook(:before_create, self)
+
+    self.class.execute(create_record_statement)
+
+    run_hook(:after_create, self)
+  end
+
+  def create_record_statement
+    columns_clause = changes.keys.join(", ")
+    values_clause = changes.values.map(&:last).map { |value| self.class.quote_value value }.join(", ")
+
+    "INSERT INTO #{self.class.table_name}(#{columns_clause}) VALUES(#{values_clause})"
   end
 
   def update_record
-    run_callbacks :update do
-      if changes.present?
-        nils = changes.select { |_, (__, new_value)| new_value.nil? }
-        objs = changes.reject { |_, (__, new_value)| new_value.nil? }
+    run_hook(:before_update, self)
 
-        statements = []
+    self.class.execute_batch(update_record_statements) unless changes.empty?
 
-        if nils.present?
-          statements << "DELETE #{nils.keys.join(", ")} FROM #{self.class.table_name} #{where_key_clause}"
-        end
+    run_hook(:after_update, self)
+  end
 
-        if objs.present?
-          update_clause = objs.map { |column, (_, new_value)| "#{column} = #{self.class.quote_value new_value}" }.join(", ")
+  def update_record_statements
+    nils = changes.select { |_, (__, new_value)| new_value.nil? }
+    objs = changes.reject { |_, (__, new_value)| new_value.nil? }
 
-          statements << "UPDATE #{self.class.table_name} SET #{update_clause} #{where_key_clause}"
-        end
+    statements = []
 
-        self.class.execute_batch(statements)
-      end
+    if nils.present?
+      statements << "DELETE #{nils.keys.join(", ")} FROM #{self.class.table_name} #{where_key_clause}"
     end
+
+    if objs.present?
+      update_clause = objs.map { |column, (_, new_value)| "#{column} = #{self.class.quote_value new_value}" }.join(", ")
+
+      statements << "UPDATE #{self.class.table_name} SET #{update_clause} #{where_key_clause}"
+    end
+
+    statements
+  end
+
+  def delete_record_statement
+    "DELETE FROM #{self.class.table_name} #{where_key_clause}"
   end
 
   def where_key_clause

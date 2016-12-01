@@ -5,4 +5,5 @@ gemspec
 
 gem "cassandra-driver"
 gem "activesupport", " ~> 4"
+gem "hooks"
 

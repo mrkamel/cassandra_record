@@ -3,6 +3,7 @@ require "cassandra"
 require "connection_pool"
 require "active_model"
 require "active_support/all"
+require "hooks"
 
 require "cassandra_record/version"
 require "cassandra_record/base"
