@@ -234,15 +234,12 @@ class CassandraRecord::Base
   end
 
   def self.execute_batch(statements, options = {})
-    opts = options.dup
-    batch_type = opts.delete(:batch_type) || CassandraRecord::LOGGED_BATCH
-
     statements.each do |statement|
       logger.debug(statement)
     end
 
     connection_pool.with do |connection|
-      batch = connection.send(:"#{batch_type}_batch")
+      batch = connection.batch
 
       statements.each do |statement|
         batch.add(statement)
@@ -250,58 +247,6 @@ class CassandraRecord::Base
 
       connection.execute(batch, options)
     end
-  end
-
-  def self.save_batch!(records, options = {})
-    records.each do |record|
-      record.validate!
-    end
-
-    _save_batch(records, options)
-  end
-
-  def self.save_batch(records, options = {})
-    records.each do |record|
-      return false unless record.valid?
-    end
-
-    _save_batch(records, options)
-  end
-
-  def self.destroy_batch(records, options = {})
-    raise CassandraRecord::RecordNotPersisted unless records.all?(&:persisted?)
-
-    records.each do |record|
-      record.run_hook :before_destroy
-    end
-
-    statements = records.map do |record|
-      record.send :delete_record_statement
-    end
-
-    execute_batch(statements, options)
-
-    records.each do |record|
-      record.destroyed!
-    end
-
-    records.each do |record|
-      record.run_hook :after_destroy
-    end
-
-    true
-  end
-
-  def self.delete_batch(records, options = {})
-    raise CassandraRecord::RecordNotPersisted unless records.all?(&:persisted?)
-
-    statements = records.map do |record|
-      record.send :delete_record_statement
-    end
-
-    execute_batch(statements, options)
-
-    true
   end
 
   private

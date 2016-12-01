@@ -274,7 +274,7 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
     ]
 
     assert_difference "TestLog.count", -2 do
-      TestLog.execute_batch(batch, consistency: :all, batch_type: CassandraRecord::UNLOGGED_BATCH)
+      TestLog.execute_batch(batch, consistency: :all)
     end
   end
 
@@ -317,23 +317,6 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
     record = temp_log.create!(timestamp: Time.now)
     record.reset_called_callbacks
     record.destroy
-
-    assert_equal [:before_destroy, :after_destroy], record.called_callbacks
-
-    record = temp_log.new(timestamp: Time.now)
-    temp_log.save_batch [record]
-
-    assert_equal [:before_validation, :after_validation, :before_save, :before_create, :after_create, :after_save], record.called_callbacks
-
-    record = temp_log.create!(timestamp: Time.now)
-    record.reset_called_callbacks
-    temp_log.save_batch [record]
-
-    assert_equal [:before_validation, :after_validation, :before_save, :before_update, :after_update, :after_save], record.called_callbacks
-
-    record = temp_log.create!(timestamp: Time.now)
-    record.reset_called_callbacks
-    temp_log.destroy_batch [record]
 
     assert_equal [:before_destroy, :after_destroy], record.called_callbacks
   end

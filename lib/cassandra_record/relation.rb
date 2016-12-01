@@ -89,7 +89,7 @@ class CassandraRecord::Relation
   end
 
   def delete_all
-    target.execute("DELETE FROM #{target.table_name} WHERE #{where_clause}")
+    target.execute("DELETE FROM #{target.table_name} #{where_clause}")
 
     true
   end

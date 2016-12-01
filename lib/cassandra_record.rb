@@ -15,9 +15,5 @@ module CassandraRecord
   class RecordInvalid < StandardError; end
   class RecordNotPersisted < StandardError; end
   class UnknownType < StandardError; end
-
-  LOGGED_BATCH = "logged"
-  UNLOGGED_BATCH = "unlogged"
-  COUNTER_BATCH = "counter"
 end
 
