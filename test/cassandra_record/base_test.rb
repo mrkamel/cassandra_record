@@ -274,7 +274,7 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
     ]
 
     assert_difference "TestLog.count", -2 do
-      TestLog.execute_batch(batch, consistency: :all)
+      TestLog.execute_batch(batch, consistency: :all, batch_type: CassandraRecord::UNLOGGED_BATCH)
     end
   end
 

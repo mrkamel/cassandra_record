@@ -234,12 +234,15 @@ class CassandraRecord::Base
   end
 
   def self.execute_batch(statements, options = {})
+    opts = options.dup
+    batch_type = opts.delete(:batch_type) || CassandraRecord::LOGGED_BATCH
+
     statements.each do |statement|
       logger.debug(statement)
     end
 
     connection_pool.with do |connection|
-      batch = connection.batch
+      batch = connection.send(:"#{batch_type}_batch")
 
       statements.each do |statement|
         batch.add(statement)
