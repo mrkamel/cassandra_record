@@ -65,11 +65,11 @@ class CassandraRecord::Base
   end
 
   def valid?
-    run_hook(:before_validation, self)
+    run_hook :before_validation
 
     retval = super
 
-    run_hook(:after_validation, self)
+    run_hook :after_validation
 
     retval
   end
@@ -113,13 +113,13 @@ class CassandraRecord::Base
   def destroy
     raise CassandraRecord::RecordNotPersisted unless persisted?
 
-    run_hook(:before_destroy, self)
+    run_hook :before_destroy
 
     delete
 
     destroyed!
 
-    run_hook(:after_destroy, self)
+    run_hook :after_destroy
 
     true
   end
@@ -272,7 +272,7 @@ class CassandraRecord::Base
     raise CassandraRecord::RecordNotPersisted unless records.all?(&:persisted?)
 
     records.each do |record|
-      record.run_hook(:before_destroy, record)
+      record.run_hook :before_destroy
     end
 
     statements = records.map do |record|
@@ -286,7 +286,7 @@ class CassandraRecord::Base
     end
 
     records.each do |record|
-      record.run_hook(:after_destroy, record)
+      record.run_hook :after_destroy
     end
 
     true
@@ -308,18 +308,18 @@ class CassandraRecord::Base
 
   def _save
     if persisted?
-      run_hook(:before_save, self)
+      run_hook :before_save
 
       update_record
 
-      run_hook(:after_save, self)
+      run_hook :after_save
     else
-      run_hook(:before_save, self)
+      run_hook :before_save
 
       create_record
       persisted!
 
-      run_hook(:after_save, self)
+      run_hook :after_save
     end
 
     changes_applied
@@ -329,8 +329,8 @@ class CassandraRecord::Base
 
   def self._save_batch(records, options = {})
     records.each do |record|
-      record.run_hook(:before_save, record)
-      record.run_hook(record.persisted? ? :before_update : :before_create, record)
+      record.run_hook :before_save
+      record.run_hook(record.persisted? ? :before_update : :before_create)
     end
 
     statements = records.flat_map do |record|
@@ -344,8 +344,8 @@ class CassandraRecord::Base
     records.each(&:persisted!)
 
     records.each_with_index do |record, index|
-      record.run_hook(persistence[index] ? :after_update : :after_create, record)
-      record.run_hook(:after_save, record)
+      record.run_hook(persistence[index] ? :after_update : :after_create)
+      record.run_hook :after_save
     end
 
     records.each do |record|
@@ -356,11 +356,11 @@ class CassandraRecord::Base
   end
 
   def create_record
-    run_hook(:before_create, self)
+    run_hook :before_create
 
     self.class.execute(create_record_statement)
 
-    run_hook(:after_create, self)
+    run_hook :after_create
   end
 
   def create_record_statement
@@ -371,11 +371,11 @@ class CassandraRecord::Base
   end
 
   def update_record
-    run_hook(:before_update, self)
+    run_hook :before_update
 
     self.class.execute_batch(update_record_statements) unless changes.empty?
 
-    run_hook(:after_update, self)
+    run_hook :after_update
   end
 
   def update_record_statements

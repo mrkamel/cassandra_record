@@ -34,11 +34,11 @@ class TestLog < CassandraRecord::Base
     Digest::SHA1.hexdigest(id.to_s)[0].to_i(16) % 8
   end
 
-  before_create do |record|
-    record.id = generate_timeuuid(timestamp)
+  before_create do
+    self.id = generate_timeuuid(timestamp)
 
-    record.date = record.id.to_date.strftime("%F")
-    record.bucket = self.class.bucket_for(record.id)
+    self.date = id.to_date.strftime("%F")
+    self.bucket = self.class.bucket_for(id)
   end
 end
 
