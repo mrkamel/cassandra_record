@@ -163,7 +163,7 @@ class CassandraRecord::Base
   end
 
   class << self
-    delegate :all, :where, :count, :limit, :first, :order, :distinct, :select, :find_each, :find_in_batches, :delete_all, to: :relation
+    delegate :all, :where, :count, :limit, :first, :order, :distinct, :select, :find_each, :find_in_batches, :delete_all, :delete_in_batches, to: :relation
   end
 
   def self.cast_value(value, type)

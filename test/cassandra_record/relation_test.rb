@@ -35,6 +35,12 @@ class CassandraRecord::RelationTest < CassandraRecord::TestCase
   def test_count
   end
 
+  def test_delete_all
+  end
+
+  def test_delete_in_batches
+  end
+
   def test_to_a
   end
 end

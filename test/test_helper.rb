@@ -44,7 +44,7 @@ end
 
 class CassandraRecord::TestCase < MiniTest::Test
   def setup
-    TestLog.delete_all
+    TestLog.delete_in_batches
   end
 
   def assert_difference(expressions, difference = 1, &block)
