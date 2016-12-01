@@ -286,7 +286,7 @@ class CassandraRecord::Base
     end
 
     records.each do |record|
-      records.run_hook(:after_destroy, record)
+      record.run_hook(:after_destroy, record)
     end
 
     true
@@ -337,7 +337,7 @@ class CassandraRecord::Base
       record.send(record.persisted? ? :update_record_statements : :create_record_statement)
     end
 
-    execute_batch(statements, options)
+    execute_batch(statements, options) unless statements.empty?
 
     persistence = records.map(&:persisted?)
 
@@ -345,6 +345,7 @@ class CassandraRecord::Base
 
     records.each_with_index do |record, index|
       record.run_hook(persistence[index] ? :after_update : :after_create, record)
+      record.run_hook(:after_save, record)
     end
 
     records.each do |record|

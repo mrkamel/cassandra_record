@@ -278,6 +278,66 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
     end
   end
 
+  def test_callbacks
+    temp_log = Class.new(TestLog) do
+      def self.table_name
+        "test_logs"
+      end
+
+      def called_callbacks
+        @called_callbacks ||= []
+      end
+
+      def reset_called_callbacks
+        @called_callbacks = []
+      end
+
+      before_validation { called_callbacks << :before_validation }
+      after_validation { called_callbacks << :after_validation }
+      before_save { called_callbacks << :before_save }
+      after_save { called_callbacks << :after_save}
+      before_create { called_callbacks << :before_create }
+      after_create { called_callbacks << :after_create }
+      before_update { called_callbacks << :before_update }
+      after_update { called_callbacks << :after_update }
+      before_destroy { called_callbacks << :before_destroy }
+      after_destroy { called_callbacks << :after_destroy }
+    end
+
+    record = temp_log.create!(timestamp: Time.now)
+
+    assert_equal [:before_validation, :after_validation, :before_save, :before_create, :after_create, :after_save], record.called_callbacks
+
+    record = temp_log.create!(timestamp: Time.now)
+    record.reset_called_callbacks
+    record.save
+
+    assert_equal [:before_validation, :after_validation, :before_save, :before_update, :after_update, :after_save], record.called_callbacks
+
+    record = temp_log.create!(timestamp: Time.now)
+    record.reset_called_callbacks
+    record.destroy
+
+    assert_equal [:before_destroy, :after_destroy], record.called_callbacks
+
+    record = temp_log.new(timestamp: Time.now)
+    temp_log.save_batch [record]
+
+    assert_equal [:before_validation, :after_validation, :before_save, :before_create, :after_create, :after_save], record.called_callbacks
+
+    record = temp_log.create!(timestamp: Time.now)
+    record.reset_called_callbacks
+    temp_log.save_batch [record]
+
+    assert_equal [:before_validation, :after_validation, :before_save, :before_update, :after_update, :after_save], record.called_callbacks
+
+    record = temp_log.create!(timestamp: Time.now)
+    record.reset_called_callbacks
+    temp_log.destroy_batch [record]
+
+    assert_equal [:before_destroy, :after_destroy], record.called_callbacks
+  end
+
   def test_validate!
   end
 
@@ -288,9 +348,6 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
   end
 
   def test_delete_batch
-  end
-
-  def test_callbacks
   end
 
   def test_dirty
