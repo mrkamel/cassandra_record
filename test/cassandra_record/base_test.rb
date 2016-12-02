@@ -322,18 +322,29 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
   end
 
   def test_validate!
-  end
+    TestLog.new(timestamp: Time.now).validate!
 
-  def test_save_batch
-  end
-
-  def test_destroy_batch
-  end
-
-  def test_delete_batch
+    assert_raises CassandraRecord::RecordInvalid do
+      TestLog.new.validate!
+    end
   end
 
   def test_dirty
+    timestamp = Time.now
+
+    test_log = TestLog.new(timestamp: timestamp, username: "username")
+
+    assert test_log.timestamp_changed?
+    assert test_log.username_changed?
+
+    assert_equal({ "timestamp" => [nil, timestamp.utc.round(3)], "username" => [nil, "username"] }, test_log.changes)
+
+    test_log.save!
+
+    refute test_log.timestamp_changed?
+    refute test_log.username_changed?
+
+    assert_blank test_log.changes
   end
 end
 

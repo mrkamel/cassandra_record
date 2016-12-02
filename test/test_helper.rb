@@ -65,6 +65,10 @@ class CassandraRecord::TestCase < MiniTest::Test
     assert_difference(expressions, 0, &block)
   end
 
+  def assert_blank(object)
+    assert object.blank?, "should be blank"
+  end
+
   def assert_present(object)
     assert object.present?, "should be present"
   end
