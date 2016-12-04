@@ -10,6 +10,29 @@ connection.execute "CREATE KEYSPACE cassandra_record WITH REPLICATION = { 'class
 CassandraRecord::Base.connection_pool = ConnectionPool.new(size: 1, timeout: 5) { Cassandra.cluster.connect("cassandra_record") }
 
 CassandraRecord::Base.execute <<EOF
+  CREATE TABLE posts(
+    user TEXT,
+    domain TEXT,
+    id TIMEUUID,
+    message TEXT,
+    timestamp TIMESTAMP,
+    PRIMARY KEY((user, domain), id)
+  )
+EOF
+
+class Post < CassandraRecord::Base
+  column :user, :text, key: true
+  column :domain, :text, key: true
+  column :id, :timeuuid, key: true
+  column :message, :text
+  column :timestamp, :timestamp
+
+  before_create do
+    self.id ||= generate_timeuuid(Time.now)
+  end
+end
+
+CassandraRecord::Base.execute <<EOF
   CREATE TABLE test_logs(
     date DATE,
     bucket INT,

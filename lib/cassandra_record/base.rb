@@ -22,6 +22,22 @@ class CassandraRecord::Base
     assign(attributes)
   end
 
+  def ==(other)
+    key_values == other.key_values
+  end
+
+  def eql?(other)
+    self == other
+  end
+
+  def hash
+    key_values.hash
+  end
+
+  def key_values
+    self.class.key_columns.map { |column, _| read_raw_attribute(column) }
+  end
+
   def assign(attributes = {})
     attributes.each do |column, value|
       send(:"#{column}=", value)

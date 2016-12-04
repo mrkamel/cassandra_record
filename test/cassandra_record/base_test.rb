@@ -346,5 +346,14 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
 
     assert_blank test_log.changes
   end
+
+  def test_key_columns
+  end
+
+  def test_key_values
+  end
+
+  def test_equality
+  end
 end
 
