@@ -28,7 +28,8 @@ class Post < CassandraRecord::Base
   column :timestamp, :timestamp
 
   before_create do
-    self.id ||= generate_timeuuid(Time.now)
+    self.timestamp ||= Time.now
+    self.id ||= generate_timeuuid(timestamp)
   end
 end
 
@@ -68,6 +69,7 @@ end
 class CassandraRecord::TestCase < MiniTest::Test
   def setup
     TestLog.delete_in_batches
+    Post.delete_in_batches
   end
 
   def assert_difference(expressions, difference = 1, &block)
