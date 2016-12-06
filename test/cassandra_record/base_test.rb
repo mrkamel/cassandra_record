@@ -260,6 +260,7 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
     ]
 
     assert_equal records.map(&:id).to_set, TestLog.execute("SELECT * FROM test_logs", consistency: :all).map { |row| row["id"] }.to_set
+    assert_equal records.map(&:id).to_set, TestLog.execute("SELECT * FROM test_logs", consistency: :all).map { |row| row["id"] }.to_set
   end
 
   def test_execute_batch
@@ -276,6 +277,11 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
     assert_difference "TestLog.count", -2 do
       TestLog.execute_batch(batch, consistency: :all)
     end
+  end
+
+  def test_statement
+    assert_equal "SELECT * FROM table WHERE date = '2016-12-06' AND id = 1 AND message = 'some''value'",
+      TestLog.statement("SELECT * FROM table WHERE date = :date AND id = :id AND message = :message", date: Date.parse("2016-12-06"), id: 1, message: "some'value")
   end
 
   def test_callbacks

@@ -265,6 +265,16 @@ class CassandraRecord::Base
     end
   end
 
+  def self.statement(template, args = {})
+    res = template.dup
+
+    args.each do |key, value|
+      res.gsub!(":#{key}", quote_value(value))
+    end
+
+    res
+  end
+
   private
 
   def _save
