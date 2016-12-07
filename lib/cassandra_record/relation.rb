@@ -96,13 +96,11 @@ class CassandraRecord::Relation
 
   def delete_in_batches
     find_in_batches do |records|
-      delete_statements = records.map do |record|
+      records.each do |record|
         where_clause = target.key_columns.map { |column, _| "#{column} = #{target.quote_value record.read_raw_attribute(column)}" }.join(" AND ")
 
-        "DELETE FROM #{target.table_name} WHERE #{where_clause}"
+        target.execute "DELETE FROM #{target.table_name} WHERE #{where_clause}"
       end
-
-      target.execute_batch(delete_statements)
     end
 
     true

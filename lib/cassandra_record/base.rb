@@ -298,34 +298,6 @@ class CassandraRecord::Base
     true
   end
 
-  def self._save_batch(records, options = {})
-    records.each do |record|
-      record.run_hook :before_save
-      record.run_hook(record.persisted? ? :before_update : :before_create)
-    end
-
-    statements = records.flat_map do |record|
-      record.send(record.persisted? ? :update_record_statements : :create_record_statement)
-    end
-
-    execute_batch(statements, options) unless statements.empty?
-
-    persistence = records.map(&:persisted?)
-
-    records.each(&:persisted!)
-
-    records.each_with_index do |record, index|
-      record.run_hook(persistence[index] ? :after_update : :after_create)
-      record.run_hook :after_save
-    end
-
-    records.each do |record|
-      record.send :changes_applied
-    end
-
-    true
-  end
-
   def create_record
     run_hook :before_create
 
