@@ -70,6 +70,16 @@ class CassandraRecord::RelationTest < CassandraRecord::TestCase
   end
 
   def test_limit
+    Post.create!(user: "user", domain: "domain", timestamp: Time.now)
+    Post.create!(user: "user", domain: "domain", timestamp: Time.now)
+    Post.create!(user: "user", domain: "domain", timestamp: Time.now)
+    Post.create!(user: "user", domain: "domain", timestamp: Time.now)
+
+    assert_equal 2, Post.limit(2).find_each.count
+    assert_equal 2, Post.where(user: "user", domain: "domain").limit(2).find_each.count
+
+    assert_equal 3, Post.limit(3).find_each.count
+    assert_equal 3, Post.where(user: "user", domain: "domain").limit(3).find_each.count
   end
 
   def test_first
