@@ -83,6 +83,11 @@ class CassandraRecord::RelationTest < CassandraRecord::TestCase
   end
 
   def test_first
+    post1 = Post.create!(user: "user", domain: "domain", timestamp: Time.now)
+    post2 = Post.create!(user: "user", domain: "domain", timestamp: Time.now)
+
+    assert_equal post1, Post.where(user: "user", domain: "domain").order(id: :asc).first
+    assert_equal post2, Post.where(user: "user", domain: "domain").order(id: :desc).first
   end
 
   def test_distinct
