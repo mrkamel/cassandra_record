@@ -83,14 +83,20 @@ class CassandraRecord::RelationTest < CassandraRecord::TestCase
   end
 
   def test_first
-    post1 = Post.create!(user: "user", domain: "domain", timestamp: Time.now)
-    post2 = Post.create!(user: "user", domain: "domain", timestamp: Time.now)
+    post1 = Post.create!(user: "user", domain: "domain", timestamp: Time.now - 1.day)
+    post2 = Post.create!(user: "user", domain: "domain", timestamp: Time.now + 1.day)
 
     assert_equal post1, Post.where(user: "user", domain: "domain").order(id: :asc).first
     assert_equal post2, Post.where(user: "user", domain: "domain").order(id: :desc).first
   end
 
   def test_distinct
+    Post.create! user: "user1", domain: "domain1", timestamp: Time.now
+    Post.create! user: "user1", domain: "domain2", timestamp: Time.now
+    Post.create! user: "user2", domain: "domain1", timestamp: Time.now
+
+    assert_equal [{ "user" => "user1", "domain" => "domain1" }, { "user" => "user1", "domain" => "domain2" }, { "user" => "user2", "domain" => "domain1" }],
+      Post.select(:user, :domain).distinct.find_each.to_a
   end
 
   def test_select
