@@ -100,9 +100,18 @@ class CassandraRecord::RelationTest < CassandraRecord::TestCase
   end
 
   def test_select
+    Post.create! user: "user1", domain: "domain1", timestamp: Time.now
+    Post.create! user: "user2", domain: "domain2", timestamp: Time.now
+
+    assert_equal [{ "user" => "user1", "domain" => "domain1" }, { "user" => "user2", "domain" => "domain2" }], Post.select(:user, :domain).find_each.to_a
   end
 
   def test_find_each
+    Post.create! user: "user1", domain: "domain1", timestamp: Time.now
+    Post.create! user: "user2", domain: "domain2", timestamp: Time.now
+    Post.create! user: "user3", domain: "domain3", timestamp: Time.now
+
+    assert_equal ["user1", "user2", "user3"].to_set, Post.find_each(batch_size: 2).map(&:user).to_set
   end
 
   def test_find_in_batches
