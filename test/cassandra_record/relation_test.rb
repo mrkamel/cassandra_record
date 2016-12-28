@@ -107,17 +107,28 @@ class CassandraRecord::RelationTest < CassandraRecord::TestCase
   end
 
   def test_find_each
-    Post.create! user: "user1", domain: "domain1", timestamp: Time.now
-    Post.create! user: "user2", domain: "domain2", timestamp: Time.now
-    Post.create! user: "user3", domain: "domain3", timestamp: Time.now
+    Post.create! user: "user", domain: "domain", message: "message1", timestamp: Time.now
+    Post.create! user: "user", domain: "domain", message: "message2", timestamp: Time.now + 1.day
+    Post.create! user: "user", domain: "domain", message: "message3", timestamp: Time.now + 2.days
 
-    assert_equal ["user1", "user2", "user3"].to_set, Post.find_each(batch_size: 2).map(&:user).to_set
+    assert_equal ["message1", "message2", "message3"], Post.find_each(batch_size: 2).map(&:message)
   end
 
   def test_find_in_batches
+    Post.create! user: "user", domain: "domain", message: "message1", timestamp: Time.now
+    Post.create! user: "user", domain: "domain", message: "message2", timestamp: Time.now + 1.day
+    Post.create! user: "user", domain: "domain", message: "message3", timestamp: Time.now + 2.days
+
+    assert_equal [["message1", "message2"], ["message3"]], Post.find_in_batches(batch_size: 2).map { |batch| batch.map(&:message) }
   end
 
   def test_count
+    Post.create! user: "user1", domain: "domain", timestamp: Time.now
+    Post.create! user: "user1", domain: "domain", timestamp: Time.now
+    Post.create! user: "user2", domain: "domain", timestamp: Time.now
+
+    assert_equal 3, Post.count
+    assert_equal 2, Post.where(user: "user1", domain: "domain").count
   end
 
   def test_delete_all
