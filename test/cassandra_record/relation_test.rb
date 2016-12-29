@@ -132,9 +132,30 @@ class CassandraRecord::RelationTest < CassandraRecord::TestCase
   end
 
   def test_delete_all
+    Post.create! user: "user", domain: "domain1", timestamp: Time.now
+    Post.create! user: "user", domain: "domain1", timestamp: Time.now
+    Post.create! user: "user", domain: "domain2", timestamp: Time.now
+
+    assert_difference "Post.count", -2 do
+      Post.where(user: "user", domain: "domain1").delete_all
+    end
   end
 
   def test_delete_in_batches
+    Post.create! user: "user", domain: "domain", timestamp: Time.now
+    Post.create! user: "user", domain: "domain", timestamp: Time.now
+
+    assert_difference "Post.count", -2 do
+      Post.delete_in_batches
+    end
+
+    Post.create! user: "user", domain: "domain1", timestamp: Time.now
+    Post.create! user: "user", domain: "domain1", timestamp: Time.now
+    Post.create! user: "user", domain: "domain2", timestamp: Time.now
+
+    assert_difference "Post.count", -2 do
+      Post.where(user: "user", domain: "domain1").delete_in_batches
+    end
   end
 
   def test_to_a
