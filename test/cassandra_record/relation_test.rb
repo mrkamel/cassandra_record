@@ -159,6 +159,11 @@ class CassandraRecord::RelationTest < CassandraRecord::TestCase
   end
 
   def test_to_a
+    Post.create! user: "user", domain: "domain1", message: "message1", timestamp: Time.now
+    Post.create! user: "user", domain: "domain1", message: "message2", timestamp: Time.now
+    Post.create! user: "user", domain: "domain2", message: "message3", timestamp: Time.now
+
+    assert_equal ["message1", "message2"].to_set, Post.where(user: "user", domain: "domain1").to_a.map(&:message).to_set
   end
 end
 
