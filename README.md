@@ -13,15 +13,15 @@ complexity of the code base.
 
 Add this line to your application's Gemfile:
 
-  gem 'cassandra_record'
+    gem 'cassandra_record'
 
 And then execute:
 
-  $ bundle
+    $ bundle
 
 Or install it yourself as:
 
-  $ gem install cassandra_record
+    $ gem install cassandra_record
 
 ## TODO
 

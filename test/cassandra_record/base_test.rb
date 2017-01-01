@@ -354,9 +354,31 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
   end
 
   def test_key_columns
+    klass = Class.new(CassandraRecord::Base) do
+      column :key1, :date, key: true
+      column :key2, :int, key: true
+      column :key3, :timeuuid, key: true
+      column :column1, :date
+      column :column2, :int
+    end
+
+    assert_equal({ key1: { type: :date, key: true }, key2: { type: :int, key: true }, key3: { type: :timeuuid, key: true }}, klass.key_columns)
   end
 
   def test_key_values
+    klass = Class.new(CassandraRecord::Base) do
+      column :key1, :date, key: true
+      column :key2, :int, key: true
+      column :key3, :timeuuid, key: true
+      column :column1, :date
+      column :column2, :int
+    end
+
+    key1 = Date.today
+    key2 = 1
+    key3 = Cassandra::TimeUuid::Generator.new.at(Time.now)
+
+    assert_equal [key1, key2, key3], klass.new(key1: key1, key2: key2, key3: key3).key_values
   end
 
   def test_equality
