@@ -354,34 +354,41 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
   end
 
   def test_key_columns
-    klass = Class.new(CassandraRecord::Base) do
-      column :key1, :date, key: true
-      column :key2, :int, key: true
-      column :key3, :timeuuid, key: true
-      column :column1, :date
-      column :column2, :int
-    end
-
-    assert_equal({ key1: { type: :date, key: true }, key2: { type: :int, key: true }, key3: { type: :timeuuid, key: true }}, klass.key_columns)
+    assert_equal({ date: { type: :date, key: true }, bucket: { type: :int, key: true }, id: { type: :timeuuid, key: true }}, TestLog.key_columns)
   end
 
   def test_key_values
-    klass = Class.new(CassandraRecord::Base) do
-      column :key1, :date, key: true
-      column :key2, :int, key: true
-      column :key3, :timeuuid, key: true
-      column :column1, :date
-      column :column2, :int
-    end
+    date = Date.today
+    bucket = 1
+    id = Cassandra::TimeUuid::Generator.new.at(Time.now)
 
-    key1 = Date.today
-    key2 = 1
-    key3 = Cassandra::TimeUuid::Generator.new.at(Time.now)
-
-    assert_equal [key1, key2, key3], klass.new(key1: key1, key2: key2, key3: key3).key_values
+    assert_equal [date, bucket, id], TestLog.new(date: date, bucket: bucket, id: id).key_values
   end
 
   def test_equality
+    generator = Cassandra::TimeUuid::Generator.new
+
+    id = generator.at(Time.parse("2017-01-01 12:00:00"))
+
+    record1 = TestLog.new(date: Date.parse("2017-01-01"), bucket: 1, id: id, username: "username1")
+    record2 = TestLog.new(date: Date.parse("2017-01-01"), bucket: 1, id: id, username: "username2")
+
+    assert_equal record1, record2
+
+    record1 = TestLog.new(date: Date.parse("2017-01-01"), bucket: 1, id: generator.at(Time.parse("2017-01-01 12:00:00")))
+    record2 = TestLog.new(date: Date.parse("2017-01-01"), bucket: 1, id: generator.at(Time.parse("2017-01-01 12:00:00")))
+
+    refute_equal record1, record2
+
+    record1 = TestLog.new(date: Date.parse("2017-01-01"), bucket: 1, id: id)
+    record2 = TestLog.new(date: Date.parse("2017-01-01"), bucket: 2, id: id)
+
+    refute_equal record1, record2
+
+    record1 = TestLog.new(date: Date.parse("2017-01-01"), bucket: 1, id: id)
+    record2 = TestLog.new(date: Date.parse("2017-01-02"), bucket: 1, id: id)
+
+    refute_equal record1, record2
   end
 end
 
