@@ -69,7 +69,7 @@ class CassandraRecord::Base
   end
 
   def save!
-    validate!(new_record? ? :create : :update)
+    validate!
 
     _save
   end
