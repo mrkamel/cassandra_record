@@ -69,7 +69,7 @@ class CassandraRecord::Base
   end
 
   def save!
-    validate!
+    validate!(new_record? ? :create : :update)
 
     _save
   end
@@ -80,18 +80,20 @@ class CassandraRecord::Base
     _save
   end
 
-  def valid?
+  def valid?(context = nil)
+    context ||= new_record? ? :create : :update
+
     run_hook :before_validation
 
-    retval = super
+    retval = super(context)
 
     run_hook :after_validation
 
     retval
   end
 
-  def validate!
-    valid? || raise(CassandraRecord::RecordInvalid, errors.to_a.join(", "))
+  def validate!(context = nil)
+    valid?(context) || raise(CassandraRecord::RecordInvalid, errors.to_a.join(", "))
   end
 
   def persisted?

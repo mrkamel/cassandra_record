@@ -40,7 +40,7 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
   def test_attributes
     test_log = TestLog.new(timestamp: "2016-11-01 12:00:00", username: "username")
 
-    assert_equal({ date: nil, bucket: nil, id: nil, username: "username", timestamp: Time.parse("2016-11-01 12:00:00").utc.round(3) }, test_log.attributes)
+    assert_equal({ date: nil, bucket: nil, id: nil, query: nil, username: "username", timestamp: Time.parse("2016-11-01 12:00:00").utc.round(3) }, test_log.attributes)
   end
 
   def test_casting
@@ -123,6 +123,20 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
     assert_difference "TestLog.count" do
       assert test_log.save
     end
+  end
+
+  def test_validation_context
+    test_log = TestLogWithContext.new
+    test_log.valid?
+
+    assert_includes test_log.errors[:username], "can't be blank"
+
+    test_log = TestLogWithContext.create!(username: "username", timestamp: Time.now)
+    test_log.username = nil
+    test_log.valid?
+
+    refute_includes test_log.errors[:username], "can't be blank"
+    assert_includes test_log.errors[:query], "can't be blank"
   end
 
   def test_create

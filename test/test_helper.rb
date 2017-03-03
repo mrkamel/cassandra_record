@@ -49,6 +49,7 @@ class TestLog < CassandraRecord::Base
   column :date, :date, key: true
   column :bucket, :int, key: true
   column :id, :timeuuid, key: true
+  column :query, :text
   column :username, :text
   column :timestamp, :timestamp
 
@@ -64,6 +65,15 @@ class TestLog < CassandraRecord::Base
     self.date = id.to_date.strftime("%F")
     self.bucket = self.class.bucket_for(id)
   end
+end
+
+class TestLogWithContext < TestLog
+  def self.table_name
+    "test_logs"
+  end
+
+  validates_presence_of :username, :on => :create
+  validates_presence_of :query, :on => :update
 end
 
 class CassandraRecord::TestCase < MiniTest::Test
