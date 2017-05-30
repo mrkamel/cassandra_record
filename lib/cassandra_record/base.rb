@@ -23,7 +23,7 @@ class CassandraRecord::Base
   end
 
   def ==(other)
-    key_values == other.key_values
+    other.instance_of?(self.class) && key_values == other.key_values
   end
 
   def eql?(other)
