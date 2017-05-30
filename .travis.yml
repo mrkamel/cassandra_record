@@ -9,7 +9,7 @@ jdk:
 
 install:
   - travis_retry bundle install
-  - curl -s http://artfiles.org/apache.org/cassandra/3.9/apache-cassandra-3.9-bin.tar.gz | tar xz -C /tmp
+  - curl -s http://archive.apache.org/dist/cassandra/3.9/apache-cassandra-3.9-bin.tar.gz | tar xz -C /tmp
   - MAX_HEAP_SIZE=128M HEAP_NEWSIZE=32M /tmp/apache-cassandra-3.9/bin/cassandra
 
 before_script:
