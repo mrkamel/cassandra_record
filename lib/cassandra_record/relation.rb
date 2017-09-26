@@ -28,6 +28,16 @@ class CassandraRecord::Relation
     end
   end
 
+  def update_all(string_or_hash)
+    if string_or_hash.is_a?(Hash)
+      target.execute("UPDATE #{target.table_name} SET #{string_or_hash.map { |column, value| "#{column} = #{target.quote_value value}" }.join(", ")} #{where_clause}")
+    else
+      target.execute("UPDATE #{target.table_name} SET #{string_or_hash} #{where_clause}")
+    end
+
+    true
+  end
+
   def order(hash = {})
     fresh.tap do |relation|
       relation.order_values = (relation.order_values || {}).merge(hash)

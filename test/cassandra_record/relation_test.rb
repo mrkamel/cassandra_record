@@ -12,6 +12,32 @@ class CassandraRecord::RelationTest < CassandraRecord::TestCase
     assert_includes posts, post2
   end
 
+  def test_update_all_with_string
+    post1 = Post.create!(user: "user1", domain: "domain1", message: "message1")
+    post2 = Post.create!(user: "user2", domain: "domain2", message: "message2")
+
+    Post.where(user: "user1", domain: "domain1", id: post1.id).update_all("message = 'new message'")
+
+    post1 = Post.where(user: "user1", domain: "domain1", id: post1.id).first
+    post2 = Post.where(user: "user2", domain: "domain2", id: post2.id).first
+
+    assert_equal "new message", post1.message
+    assert_equal "message2", post2.message
+  end
+
+  def test_update_all_with_hash
+    post1 = Post.create!(user: "user1", domain: "domain1", message: "message1")
+    post2 = Post.create!(user: "user2", domain: "domain2", message: "message2")
+
+    Post.where(user: "user1", domain: "domain1", id: post1.id).update_all(message: "new message")
+
+    post1 = Post.where(user: "user1", domain: "domain1", id: post1.id).first
+    post2 = Post.where(user: "user2", domain: "domain2", id: post2.id).first
+
+    assert_equal "new message", post1.message
+    assert_equal "message2", post2.message
+  end
+
   def test_where
     post1 = Post.create!(user: "user", domain: "domain1", message: "message1")
     post2 = Post.create!(user: "user", domain: "domain1", message: "message2")
