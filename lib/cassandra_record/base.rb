@@ -220,6 +220,14 @@ class CassandraRecord::Base
     end
   end
 
+  def self.quote_table_name(table_name)
+    quote_column_name(table_name)
+  end
+
+  def self.quote_column_name(column_name)
+    "\"#{column_name.to_s.gsub(/\"/, "")}\""
+  end
+
   def self.quote_value(value)
     case value
       when Time, ActiveSupport::TimeWithZone
@@ -240,7 +248,7 @@ class CassandraRecord::Base
   end 
 
   def self.truncate_table
-    execute "TRUNCATE TABLE #{table_name}"
+    execute "TRUNCATE TABLE #{quote_table_name table_name}"
   end
 
   def self.execute(statement, options = {})
@@ -309,10 +317,10 @@ class CassandraRecord::Base
   end
 
   def create_record_statement
-    columns_clause = changes.keys.join(", ")
+    columns_clause = changes.keys.map { |column_name| self.class.quote_column_name column_name }.join(", ")
     values_clause = changes.values.map(&:last).map { |value| self.class.quote_value value }.join(", ")
 
-    "INSERT INTO #{self.class.table_name}(#{columns_clause}) VALUES(#{values_clause})"
+    "INSERT INTO #{self.class.quote_table_name self.class.table_name}(#{columns_clause}) VALUES(#{values_clause})"
   end
 
   def update_record
@@ -330,24 +338,24 @@ class CassandraRecord::Base
     statements = []
 
     if nils.present?
-      statements << "DELETE #{nils.keys.join(", ")} FROM #{self.class.table_name} #{where_key_clause}"
+      statements << "DELETE #{nils.keys.join(", ")} FROM #{self.class.quote_table_name self.class.table_name} #{where_key_clause}"
     end
 
     if objs.present?
-      update_clause = objs.map { |column, (_, new_value)| "#{column} = #{self.class.quote_value new_value}" }.join(", ")
+      update_clause = objs.map { |column, (_, new_value)| "#{self.class.quote_column_name column} = #{self.class.quote_value new_value}" }.join(", ")
 
-      statements << "UPDATE #{self.class.table_name} SET #{update_clause} #{where_key_clause}"
+      statements << "UPDATE #{self.class.quote_table_name self.class.table_name} SET #{update_clause} #{where_key_clause}"
     end
 
     statements
   end
 
   def delete_record_statement
-    "DELETE FROM #{self.class.table_name} #{where_key_clause}"
+    "DELETE FROM #{self.class.quote_table_name self.class.table_name} #{where_key_clause}"
   end
 
   def where_key_clause
-    "WHERE #{self.class.key_columns.map { |column, _| "#{column} = #{self.class.quote_value read_raw_attribute(column)}" }.join(" AND ")}"
+    "WHERE #{self.class.key_columns.map { |column, _| "#{self.class.quote_column_name column} = #{self.class.quote_value read_raw_attribute(column)}" }.join(" AND ")}"
   end
 
   def generate_uuid

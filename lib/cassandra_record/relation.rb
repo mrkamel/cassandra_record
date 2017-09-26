@@ -30,9 +30,9 @@ class CassandraRecord::Relation
 
   def update_all(string_or_hash)
     if string_or_hash.is_a?(Hash)
-      target.execute("UPDATE #{target.table_name} SET #{string_or_hash.map { |column, value| "#{column} = #{target.quote_value value}" }.join(", ")} #{where_clause}")
+      target.execute("UPDATE #{target.quote_table_name target.table_name} SET #{string_or_hash.map { |column, value| "#{target.quote_column_name column} = #{target.quote_value value}" }.join(", ")} #{where_clause}")
     else
-      target.execute("UPDATE #{target.table_name} SET #{string_or_hash} #{where_clause}")
+      target.execute("UPDATE #{target.quote_table_name target.table_name} SET #{string_or_hash} #{where_clause}")
     end
 
     true
@@ -83,7 +83,7 @@ class CassandraRecord::Relation
   def find_in_batches(batch_size: 1_000)
     return enum_for(:find_in_batches, batch_size: batch_size) unless block_given?
 
-    each_page "SELECT #{select_clause} FROM #{target.table_name} #{where_clause} #{order_clause} #{limit_clause}", page_size: batch_size do |result|
+    each_page "SELECT #{select_clause} FROM #{target.quote_table_name target.table_name} #{where_clause} #{order_clause} #{limit_clause}", page_size: batch_size do |result|
       records = []
 
       result.each do |row|
@@ -99,7 +99,7 @@ class CassandraRecord::Relation
   end
 
   def delete_all
-    target.execute("DELETE FROM #{target.table_name} #{where_clause}")
+    target.execute("DELETE FROM #{target.quote_table_name target.table_name} #{where_clause}")
 
     true
   end
@@ -107,9 +107,9 @@ class CassandraRecord::Relation
   def delete_in_batches
     find_in_batches do |records|
       records.each do |record|
-        where_clause = target.key_columns.map { |column, _| "#{column} = #{target.quote_value record.read_raw_attribute(column)}" }.join(" AND ")
+        where_clause = target.key_columns.map { |column, _| "#{target.quote_column_name column} = #{target.quote_value record.read_raw_attribute(column)}" }.join(" AND ")
 
-        target.execute "DELETE FROM #{target.table_name} WHERE #{where_clause}"
+        target.execute "DELETE FROM #{target.quote_table_name target.table_name} WHERE #{where_clause}"
       end
     end
 
@@ -117,7 +117,7 @@ class CassandraRecord::Relation
   end
 
   def count
-    cql = "SELECT COUNT(*) FROM #{target.table_name} #{where_clause}"
+    cql = "SELECT COUNT(*) FROM #{target.quote_table_name target.table_name} #{where_clause}"
 
     target.execute(cql).first["count"]
   end
@@ -166,9 +166,9 @@ class CassandraRecord::Relation
     Array(where_values).each do |hash|
       hash.each do |column, value|
         if value.is_a?(Array) || value.is_a?(Range)
-          constraints << "#{column} IN (#{value.to_a.map { |v| target.quote_value v }.join(", ")})"
+          constraints << "#{target.quote_column_name column} IN (#{value.to_a.map { |v| target.quote_value v }.join(", ")})"
         else
-          constraints << "#{column} = #{target.quote_value value}"
+          constraints << "#{target.quote_column_name column} = #{target.quote_value value}"
         end
       end
     end
@@ -179,7 +179,7 @@ class CassandraRecord::Relation
   end
 
   def order_clause
-    "#{order_values.presence ? "ORDER BY #{order_values.map { |column, value| "#{column} #{value}" }.join(", ")}" : ""}"
+    "#{order_values.presence ? "ORDER BY #{order_values.map { |column, value| "#{target.quote_column_name column} #{value}" }.join(", ")}" : ""}"
   end
 
   def limit_clause
