@@ -21,9 +21,9 @@ CassandraRecord::Base.execute <<EOF
 EOF
 
 class Post < CassandraRecord::Base
-  column :user, :text, key: true
-  column :domain, :text, key: true
-  column :id, :timeuuid, key: true
+  column :user, :text, partition_key: true
+  column :domain, :text, partition_key: true
+  column :id, :timeuuid, clustering_key: true
   column :message, :text
   column :timestamp, :timestamp
 
@@ -46,9 +46,9 @@ CassandraRecord::Base.execute <<EOF
 EOF
 
 class TestLog < CassandraRecord::Base
-  column :date, :date, key: true
-  column :bucket, :int, key: true
-  column :id, :timeuuid, key: true
+  column :date, :date, partition_key: true
+  column :bucket, :int, partition_key: true
+  column :id, :timeuuid, clustering_key: true
   column :query, :text
   column :username, :text
   column :timestamp, :timestamp

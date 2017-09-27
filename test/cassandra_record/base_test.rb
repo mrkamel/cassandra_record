@@ -368,7 +368,15 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
   end
 
   def test_key_columns
-    assert_equal({ date: { type: :date, key: true }, bucket: { type: :int, key: true }, id: { type: :timeuuid, key: true }}, TestLog.key_columns)
+    assert_equal({ date: { type: :date, partition_key: true, clustering_key: false }, bucket: { type: :int, partition_key: true, clustering_key: false }, id: { type: :timeuuid, partition_key: false, clustering_key: true }}, TestLog.key_columns)
+  end
+
+  def test_partition_key_columns
+    assert_equal({ date: { type: :date, partition_key: true, clustering_key: false }, bucket: { type: :int, partition_key: true, clustering_key: false }}, TestLog.partition_key_columns)
+  end
+
+  def test_key_columns
+    assert_equal({ id: { type: :timeuuid, partition_key: false, clustering_key: true }}, TestLog.clustering_key_columns)
   end
 
   def test_key_values

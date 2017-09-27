@@ -8,6 +8,6 @@ class CassandraRecord::SchemaMigration < CassandraRecord::Base
     execute "CREATE TABLE schema_migrations(version TEXT PRIMARY KEY)"
   end
 
-  column :version, :text, key: true
+  column :version, :text, partition_key: true
 end
 

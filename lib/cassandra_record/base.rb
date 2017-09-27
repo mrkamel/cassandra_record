@@ -155,11 +155,19 @@ class CassandraRecord::Base
   end
 
   def self.key_columns
-    columns.select { |_, options| options[:key] }
+    partition_key_columns.merge(clustering_key_columns)
   end
     
-  def self.column(name, type, key: false)
-    self.columns = columns.merge(name => { type: type, key: key })
+  def self.partition_key_columns
+    columns.select { |_, options| options[:partition_key] }
+  end
+
+  def self.clustering_key_columns
+    columns.select { |_, options| options[:clustering_key] }
+  end
+
+  def self.column(name, type, partition_key: false, clustering_key: false)
+    self.columns = columns.merge(name => { type: type, partition_key: partition_key, clustering_key: clustering_key })
 
     define_attribute_methods name
 
@@ -168,7 +176,7 @@ class CassandraRecord::Base
     end
 
     define_method :"#{name}=" do |value|
-      raise(ArgumentError, "Can't update key '#{name}' for persisted records") if persisted? && self.class.columns[name][:key]
+      raise(ArgumentError, "Can't update key '#{name}' for persisted records") if persisted? && (self.class.columns[name][:partition_key] || self.class.columns[name][:clustering_key])
 
       send :"#{name}_will_change!" unless read_raw_attribute(name) == value
 
