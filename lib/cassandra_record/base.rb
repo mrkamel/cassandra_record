@@ -259,6 +259,16 @@ class CassandraRecord::Base
     execute "TRUNCATE TABLE #{quote_table_name table_name}"
   end
 
+  def self.statement(string, args = {})
+    res = string.dup
+
+    args.each do |key, value|
+      res.gsub!(":#{key}", quote_value(value))
+    end
+
+    res
+  end
+
   def self.execute(statement, options = {})
     logger.debug(statement)
 

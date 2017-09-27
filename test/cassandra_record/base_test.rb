@@ -267,6 +267,10 @@ class CassandraRecord::BaseTest < CassandraRecord::TestCase
     assert_equal 0, TestLog.count
   end
 
+  def test_statement
+    assert_equal "UPDATE table_table SET column_name = 1 WHERE key_name = 'key name'", CassandraRecord::Base.statement("UPDATE table_name SET column_name = :value WHERE key_name = :key_name", key_name: "key name", value: 1)
+  end
+
   def test_execute
     records = [
       TestLog.create!(timestamp: Time.parse("2016-11-01 12:00:00")),
