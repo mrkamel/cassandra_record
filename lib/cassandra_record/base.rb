@@ -283,13 +283,13 @@ class CassandraRecord::Base
     end
 
     connection_pool.with do |connection|
-      batch = connection.batch
+      batch = connection.send(:"#{options[:batch_type] || "logged"}_batch")
 
       statements.each do |statement|
         batch.add(statement)
       end
 
-      connection.execute(batch, options)
+      connection.execute(batch, options.except(:batch_type))
     end
   end
 
