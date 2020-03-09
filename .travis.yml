@@ -5,7 +5,7 @@ rvm:
   - 2.7.0
 
 jdk:
-  - oraclejdk8
+  - openjdk8
 
 install:
   - travis_retry bundle install
